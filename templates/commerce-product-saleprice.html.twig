@@ -38,6 +38,12 @@
         <span class="savings-number">{{ savings_percentage }}%</span>
       </div>
     {% endif %}
+    {% if on_sale_from %}
+      <div class="sale-info">
+        <span class="sale-info-label">{% trans %}On sale from:{% endtrans %}</span>
+        <span class="sale-info-date">{{ on_sale_from }}</span>
+      </div>
+    {% endif %}
     {% if on_sale_until %}
       <div class="sale-info">
         <span class="sale-info-label">{% trans %}On sale until:{% endtrans %}</span>

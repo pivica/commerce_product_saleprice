@@ -8,6 +8,9 @@ commerce_product_saleprice.settings:
     on_sale_field:
       type: string
       label: 'On sale field'
+    on_sale_from_field:
+      type: string
+      label: 'On sale from'
     on_sale_until_field:
       type: string
       label: 'On sale until'

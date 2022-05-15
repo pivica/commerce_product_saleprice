@@ -84,6 +84,14 @@ class SettingsForm extends ConfigFormBase {
       '#default_value' => $this->config('commerce_product_saleprice.settings')->get('on_sale_field'),
     ];
 
+    $form['on_sale_from_field'] = [
+      '#type' => 'select',
+      '#title' => $this->t('On sale from'),
+      '#options' => $this->getFields('datetime'),
+      '#description' => $this->t('This must be a field of Date type on Product variation.'),
+      '#default_value' => $this->config('commerce_product_saleprice.settings')->get('on_sale_from_field'),
+    ];
+
     $form['on_sale_until_field'] = [
       '#type' => 'select',
       '#title' => $this->t('On sale until'),
@@ -101,11 +109,13 @@ class SettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $saleprice_field = $form_state->getValue('saleprice_field') == '_none' ? '' : $form_state->getValue('saleprice_field');
     $on_sale_field = $form_state->getValue('on_sale_field') == '_none' ? '' : $form_state->getValue('on_sale_field');
+    $on_sale_from_field = $form_state->getValue('on_sale_from_field') == '_none' ? '' : $form_state->getValue('on_sale_from_field');
     $on_sale_until_field = $form_state->getValue('on_sale_until_field') == '_none' ? '' : $form_state->getValue('on_sale_until_field');
 
     $this->config('commerce_product_saleprice.settings')
       ->set('saleprice_field', $saleprice_field)
       ->set('on_sale_field', $on_sale_field)
+      ->set('on_sale_from_field', $on_sale_from_field)
       ->set('on_sale_until_field', $on_sale_until_field)
       ->save();
 

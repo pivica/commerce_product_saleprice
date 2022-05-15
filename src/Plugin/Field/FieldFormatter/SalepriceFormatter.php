@@ -142,6 +142,19 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
 
       $on_sale = $this->salepriceService->isOnSale($purchasable_entity);
 
+      $on_sale_from = NULL;
+      $on_sale_from_field = $this->config->get('on_sale_from_field');
+      if (
+        $on_sale === TRUE &&
+        !empty($on_sale_from_field) &&
+        $purchasable_entity->get($on_sale_from_field)->isEmpty() === FALSE
+      ) {
+        $store = $context->getStore();
+        $on_sale_from = new DrupalDateTime($purchasable_entity->get($on_sale_from_field)->value, DateTimeItemInterface::STORAGE_TIMEZONE);
+        $on_sale_from->setTimeZone(new \DateTimeZone($store->getTimezone()));
+        $on_sale_from = $on_sale_from->format('d-m-Y H:i');
+      }
+
       $on_sale_until = NULL;
       $on_sale_until_field = $this->config->get('on_sale_until_field');
       if (
@@ -165,6 +178,7 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
         '#show_savings_number' => (bool) $this->getSetting('show_savings_number'),
         '#show_savings_percentage' => (bool) $this->getSetting('show_savings_percentage'),
         '#on_sale' => $on_sale,
+        '#on_sale_from' => $on_sale_from,
         '#on_sale_until' => $on_sale_until,
         '#cache' => [
           'tags' => $purchasable_entity->getCacheTags(),

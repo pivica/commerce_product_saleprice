@@ -41,9 +41,10 @@ class SalepriceService {
   public function isOnSale(ProductVariationInterface $product_variation) {
     $saleprice_field = $this->config->get('saleprice_field');
     $on_sale_field = $this->config->get('on_sale_field');
+    $on_sale_from_field = $this->config->get('on_sale_from_field');
     $on_sale_until_field = $this->config->get('on_sale_until_field');
 
-    // Bail if we don't have 'Sale Price' field configured or it's empty.
+    // Bail if we don't have 'Sale Price' field configured, or it's empty.
     if (
       empty($saleprice_field) ||
       $product_variation->get($saleprice_field)->isEmpty()
@@ -51,7 +52,7 @@ class SalepriceService {
       return FALSE;
     }
 
-    // Bail if we have 'On Sale' field configured and it's not checked.
+    // Bail if we have 'On Sale' field configured, and it's not checked.
     if (
       !empty($on_sale_field) &&
       empty($product_variation->get($on_sale_field)->value)
@@ -59,7 +60,23 @@ class SalepriceService {
       return FALSE;
     }
 
-    // Bail if we have 'On sale until' field configured and it's not empty and
+    // Bail if we have 'On sale from' field configured, and it's not empty and
+    // date has not passed.
+    if (
+      !empty($on_sale_from_field) &&
+      !empty($product_variation->get($on_sale_from_field)->value)
+    ) {
+      $stores = $product_variation->getStores();
+      $store = reset($stores);
+      $on_sale_from = new DrupalDateTime($product_variation->get($on_sale_from_field)->value, DateTimeItemInterface::STORAGE_TIMEZONE);
+      $on_sale_from->setTimeZone(new \DateTimeZone($store->getTimezone()));
+      $now = new DrupalDateTime('now', $store->getTimezone());
+      if ($now <= $on_sale_from) {
+        return FALSE;
+      }
+    }
+
+    // Bail if we have 'On sale until' field configured, and it's not empty and
     // date has passed.
     if (
       !empty($on_sale_until_field) &&
