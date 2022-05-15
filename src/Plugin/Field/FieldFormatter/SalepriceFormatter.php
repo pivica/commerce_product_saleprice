@@ -5,9 +5,11 @@ namespace Drupal\commerce_product_saleprice\Plugin\Field\FieldFormatter;
 use Drupal\commerce\Context;
 use Drupal\commerce_price\Plugin\Field\FieldFormatter\PriceCalculatedFormatter;
 use Drupal\commerce_product_saleprice\Services\SalepriceService;
+use Drupal\commerce_store\Entity\Store;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Datetime\DrupalDateTime;
+use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
@@ -36,6 +38,13 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
   protected $config;
 
   /**
+   * The date format storage.
+   *
+   * @var \Drupal\Core\Entity\EntityStorageInterface
+   */
+  protected $dateFormatStorage;
+
+  /**
    * The saleprice service.
    *
    * @var \Drupal\commerce_product_saleprice\Services\SalepriceService
@@ -48,6 +57,7 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
     $instance->setConfigFactory($container->get('config.factory'));
+    $instance->setDateFormatStorage($container->get('entity_type.manager')->getStorage('date_format'));
     $instance->setSalepriceService($container->get('commerce_product_saleprice.saleprice_service'));
     return $instance;
   }
@@ -60,6 +70,16 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
    */
   public function setConfigFactory(ConfigFactoryInterface $config_factory) {
     $this->config = $config_factory->get('commerce_product_saleprice.settings');
+  }
+
+  /**
+   * Sets the date format storage.
+   *
+   * @param \Drupal\Core\Entity\EntityStorageInterface $date_format_storage
+   *   The date format storage.
+   */
+  public function setDateFormatStorage(EntityStorageInterface $date_format_storage) {
+    $this->dateFormatStorage = $date_format_storage;
   }
 
   /**
@@ -77,6 +97,7 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
    */
   public static function defaultSettings() {
     return [
+      'date_format' => 'medium',
       'show_savings_number' => FALSE,
       'show_savings_percentage' => FALSE,
     ] + parent::defaultSettings();
@@ -102,6 +123,23 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
       '#weight' => -99,
     ];
 
+    $date = new DrupalDateTime('now', $this->getTimezone());
+    /** @var \Drupal\Core\Datetime\DateFormatInterface[] $date_formats */
+    $date_formats = $this->dateFormatStorage->loadMultiple();
+    $options = [];
+    foreach ($date_formats as $type => $date_format) {
+      $example = $date->format($date_format->getPattern());
+      $options[$type] = $date_format->label() . ' (' . $example . ')';
+    }
+
+    $elements['date_format'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Date format'),
+      '#description' => $this->t('Choose a format for displaying the date. Be sure to set a format appropriate for the field, i.e. omitting time for a field that only has a date.'),
+      '#options' => $options,
+      '#default_value' => $this->getSetting('date_format'),
+    ];
+
     return $elements;
   }
 
@@ -110,6 +148,12 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
    */
   public function settingsSummary() {
     $summary = parent::settingsSummary();
+
+    if ($this->getSetting('date_format')) {
+      $date = new DrupalDateTime('now', $this->getTimezone());
+      $date_format = $this->dateFormatStorage->load($this->getSetting('date_format'));
+      $summary[] = $this->t('Date format %date.', ['%date' => $date->format($date_format->getPattern())]);
+    }
 
     if ($this->getSetting('show_savings_number')) {
       $summary[] = $this->t('Show savings number.');
@@ -142,6 +186,8 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
 
       $on_sale = $this->salepriceService->isOnSale($purchasable_entity);
 
+      $date_format = $this->dateFormatStorage->load($this->getSetting('date_format'));
+
       $on_sale_from = NULL;
       $on_sale_from_field = $this->config->get('on_sale_from_field');
       if (
@@ -149,10 +195,9 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
         !empty($on_sale_from_field) &&
         $purchasable_entity->get($on_sale_from_field)->isEmpty() === FALSE
       ) {
-        $store = $context->getStore();
         $on_sale_from = new DrupalDateTime($purchasable_entity->get($on_sale_from_field)->value, DateTimeItemInterface::STORAGE_TIMEZONE);
-        $on_sale_from->setTimeZone(new \DateTimeZone($store->getTimezone()));
-        $on_sale_from = $on_sale_from->format('d-m-Y H:i');
+        $on_sale_from->setTimeZone(new \DateTimeZone($this->getTimezone()));
+        $on_sale_from = $on_sale_from->format($date_format->getPattern());
       }
 
       $on_sale_until = NULL;
@@ -162,10 +207,9 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
         !empty($on_sale_until_field) &&
         $purchasable_entity->get($on_sale_until_field)->isEmpty() === FALSE
       ) {
-        $store = $context->getStore();
         $on_sale_until = new DrupalDateTime($purchasable_entity->get($on_sale_until_field)->value, DateTimeItemInterface::STORAGE_TIMEZONE);
-        $on_sale_until->setTimeZone(new \DateTimeZone($store->getTimezone()));
-        $on_sale_until = $on_sale_until->format('d-m-Y H:i');
+        $on_sale_until->setTimeZone(new \DateTimeZone($this->getTimezone()));
+        $on_sale_until = $on_sale_until->format($date_format->getPattern());
       }
 
       $elements[0] = [
@@ -191,6 +235,28 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
     }
 
     return $elements;
+  }
+
+  /**
+   * Gets the timezone used for date formatting.
+   *
+   * This is the timezone of the current store, with a fallback to the
+   * site timezone, in case the site doesn't have any stores yet.
+   *
+   * @return string
+   *   The timezone.
+   */
+  protected function getTimezone() {
+    $store = $this->currentStore->getStore();
+    if ($store) {
+      $timezone = $store->getTimezone();
+    }
+    else {
+      $site_timezone = Store::getSiteTimezone();
+      $timezone = reset($site_timezone);
+    }
+
+    return $timezone;
   }
 
 }
