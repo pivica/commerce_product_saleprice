@@ -68,6 +68,14 @@ class SettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
+    $form['discount_field'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Discount field'),
+      '#options' => $this->getFields('integer'),
+      '#description' => $this->t('This must be a field of Number (integer) type on Product variation.'),
+      '#default_value' => $this->config('commerce_product_saleprice.settings')->get('discount_field'),
+    ];
+
     $form['saleprice_field'] = [
       '#type' => 'select',
       '#title' => $this->t('Saleprice field'),
@@ -107,12 +115,14 @@ class SettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    $discount_field = $form_state->getValue('discount_field') == '_none' ? '' : $form_state->getValue('discount_field');
     $saleprice_field = $form_state->getValue('saleprice_field') == '_none' ? '' : $form_state->getValue('saleprice_field');
     $on_sale_field = $form_state->getValue('on_sale_field') == '_none' ? '' : $form_state->getValue('on_sale_field');
     $on_sale_from_field = $form_state->getValue('on_sale_from_field') == '_none' ? '' : $form_state->getValue('on_sale_from_field');
     $on_sale_until_field = $form_state->getValue('on_sale_until_field') == '_none' ? '' : $form_state->getValue('on_sale_until_field');
 
     $this->config('commerce_product_saleprice.settings')
+      ->set('discount_field', $discount_field)
       ->set('saleprice_field', $saleprice_field)
       ->set('on_sale_field', $on_sale_field)
       ->set('on_sale_from_field', $on_sale_from_field)

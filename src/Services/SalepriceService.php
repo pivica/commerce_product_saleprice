@@ -39,15 +39,17 @@ class SalepriceService {
    *   TRUE if product is on sale, FALSE otherwise.
    */
   public function isOnSale(ProductVariationInterface $product_variation) {
+    $discount_field = $this->config->get('discount_field');
     $saleprice_field = $this->config->get('saleprice_field');
     $on_sale_field = $this->config->get('on_sale_field');
     $on_sale_from_field = $this->config->get('on_sale_from_field');
     $on_sale_until_field = $this->config->get('on_sale_until_field');
 
-    // Bail if we don't have 'Sale Price' field configured, or it's empty.
+    // Bail if we don't have 'Sale Price' or 'Discount' field configured, or
+    // they are both empty.
     if (
-      empty($saleprice_field) ||
-      $product_variation->get($saleprice_field)->isEmpty()
+      (empty($discount_field) || $product_variation->get($discount_field)->isEmpty()) &&
+      (empty($saleprice_field) || $product_variation->get($saleprice_field)->isEmpty())
     ) {
       return FALSE;
     }

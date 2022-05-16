@@ -47,9 +47,22 @@ class SalepriceResolver implements PriceResolverInterface {
    */
   public function resolve(PurchasableEntityInterface $product_variation, $quantity, Context $context) {
     if ($this->salepriceService->isOnSale($product_variation)) {
+      $discount_field = $this->config->get('discount_field');
+      if (!$product_variation->get($discount_field)->isEmpty()) {
+        $discount = $product_variation->get($discount_field)->first()->getValue();
+        $price = $product_variation->getPrice();
+        return $price->multiply((100 - ((float) $discount['value'])) / 100);
+      }
+
       $saleprice_field = $this->config->get('saleprice_field');
-      return $product_variation->get($saleprice_field)->first()->toPrice();
+      if (!$product_variation->get($saleprice_field)->isEmpty()) {
+        return $product_variation->get($saleprice_field)->first()->toPrice();
+      }
+
+      return NULL;
     }
+
+    return NULL;
   }
 
 }
