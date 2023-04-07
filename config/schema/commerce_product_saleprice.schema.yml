@@ -3,7 +3,7 @@ commerce_product_saleprice.settings:
   label: 'Sale price'
   mapping:
     discount_field:
-      type: integer
+      type: string
       label: 'Discount field'
     saleprice_field:
       type: string
