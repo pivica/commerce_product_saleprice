@@ -34,6 +34,7 @@ function commerce_product_saleprice_theme($existing, $type, $theme, $path) {
         'original_price' => NULL,
         'savings_number' => NULL,
         'savings_percentage' => NULL,
+        'show_savings_date' => NULL,
         'show_savings_number' => NULL,
         'show_savings_percentage' => NULL,
         'on_sale' => NULL,

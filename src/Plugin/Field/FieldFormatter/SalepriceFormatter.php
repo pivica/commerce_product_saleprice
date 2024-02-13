@@ -98,6 +98,7 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
   public static function defaultSettings() {
     return [
       'date_format' => 'medium',
+      'show_savings_date' => TRUE,
       'show_savings_number' => FALSE,
       'show_savings_percentage' => FALSE,
     ] + parent::defaultSettings();
@@ -109,18 +110,25 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
   public function settingsForm(array $form, FormStateInterface $form_state) {
     $elements = parent::settingsForm($form, $form_state);
 
+    $elements['show_savings_date'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Show savings date'),
+      '#default_value' => $this->getSetting('show_savings_date'),
+      '#weight' => -100,
+    ];
+
     $elements['show_savings_number'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Show savings number'),
       '#default_value' => $this->getSetting('show_savings_number'),
-      '#weight' => -100,
+      '#weight' => -95,
     ];
 
     $elements['show_savings_percentage'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Show savings percentage'),
       '#default_value' => $this->getSetting('show_savings_percentage'),
-      '#weight' => -99,
+      '#weight' => -90,
     ];
 
     $date = new DrupalDateTime('now', $this->getTimezone());
@@ -153,6 +161,10 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
       $date = new DrupalDateTime('now', $this->getTimezone());
       $date_format = $this->dateFormatStorage->load($this->getSetting('date_format'));
       $summary[] = $this->t('Date format %date.', ['%date' => $date->format($date_format->getPattern())]);
+    }
+
+    if ($this->getSetting('show_savings_date')) {
+      $summary[] = $this->t('Show savings date.');
     }
 
     if ($this->getSetting('show_savings_number')) {
@@ -219,6 +231,7 @@ class SalepriceFormatter extends PriceCalculatedFormatter implements ContainerFa
         '#original_price' => $this->currencyFormatter->format($original_price->getNumber(), $original_price->getCurrencyCode(), $options),
         '#savings_number' => $this->currencyFormatter->format($savings_price->getNumber(), $savings_price->getCurrencyCode(), $options),
         '#savings_percentage' => $savings_percentage,
+        '#show_savings_date' => (bool) $this->getSetting('show_savings_date'),
         '#show_savings_number' => (bool) $this->getSetting('show_savings_number'),
         '#show_savings_percentage' => (bool) $this->getSetting('show_savings_percentage'),
         '#on_sale' => $on_sale,
